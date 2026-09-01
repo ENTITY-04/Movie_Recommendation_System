@@ -269,6 +269,7 @@ if page == "🎬 Movie Recommendations":
 
     # ── Tab 1: Similar Movies ──
     with tab1:
+        st.info("**Method: Content-Based Filtering**\n\nThis method looks at the genres and tags of the movie you selected, and finds other movies that have similar descriptions. It doesn't look at user ratings, just the movie's own characteristics.")
         st.markdown('<div class="section-header">Search for a Movie</div>', unsafe_allow_html=True)
 
         search_query = st.text_input(
@@ -307,14 +308,22 @@ if page == "🎬 Movie Recommendations":
                             unsafe_allow_html=True,
                         )
                         for _, row in similar.iterrows():
+                            reason = f"Recommended because its genres ({row['genres']}) and tags are a {row['similarity_score']:.0%} match to {movie_info['title']}."
                             st.markdown(
                                 f"""
                                 <div class="movie-card">
-                                    <div class="movie-title">{row['title']}</div>
-                                    <div class="movie-genres">{row['genres']}</div>
-                                    <span class="score-badge">
-                                        Similarity: {row['similarity_score']:.2%}
-                                    </span>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div>
+                                            <div class="movie-title">{row['title']}</div>
+                                            <div class="movie-genres">{row['genres']}</div>
+                                        </div>
+                                        <span class="score-badge">
+                                            Similarity: {row['similarity_score']:.2%}
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #a1a1aa; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                        💡 <i>{reason}</i>
+                                    </div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True,
@@ -361,30 +370,44 @@ if page == "🎬 Movie Recommendations":
             key="rec_method",
         )
 
-        if st.button("🚀 Get Recommendations", type="primary", key="get_recs"):
-            with st.spinner("Generating recommendations..."):
-                if rec_method == "Hybrid":
-                    hybrid_engine = build_hybrid_engine(
-                        ratings, movies, tags, algo_choice
-                    )
-                    recs = hybrid_engine.recommend(
-                        selected_user, n=n_recs, alpha=alpha
-                    )
-                    score_col = "hybrid_score"
+        algo_name = {"svd": "SVD", "knn": "KNN Basic", "nmf": "NMF"}[algo_choice]
+        algo_descriptions = {
+            "svd": "This method acts like an advanced matchmaking AI. Instead of just looking at genres, it uncovers deep, abstract connections between movies—like 'slow-paced films with dark atmospheres'—to figure out exactly what you like and dislike.",
+            "knn": "This method finds other people whose tastes perfectly match yours (your 'neighbors') and recommends what they liked.",
+            "nmf": "This method acts like a recipe builder. It figures out your movie taste by combining basic ingredients—like '3 parts Action, 2 parts Comedy, and 1 part Sci-Fi'—to find the perfect movie for you."
+        }
 
-                elif rec_method == "Content-Based Only":
-                    content_engine = build_content_engine(movies, tags)
-                    recs = content_engine.recommend_for_user(
-                        selected_user, ratings, n=n_recs
-                    )
-                    score_col = "content_score"
+        if rec_method == "Hybrid":
+            st.info(f"**Method: Hybrid (Content + {algo_name})**\n\nThis method combines both content (what the movie is about) and collaborative filtering ({algo_descriptions[algo_choice].lower()}). It gives you the best of both worlds by looking at both the movie itself and how people rated it.")
+        elif rec_method == "Content-Based Only":
+            st.info("**Method: Content-Based Filtering**\n\nThis method looks at the genres and tags of the movies you've liked, and finds other movies with similar descriptions. It doesn't look at other users' ratings, just your own taste in movie characteristics.")
+        else:
+            st.info(f"**Method: Collaborative Filtering ({algo_name})**\n\n{algo_descriptions[algo_choice]}")
 
-                else:
-                    collab_engine = build_collab_engine(ratings, algo_choice)
-                    recs = collab_engine.recommend_for_user(
-                        selected_user, ratings, movies, n=n_recs
-                    )
-                    score_col = "predicted_rating"
+        # Generate recommendations dynamically without a button
+        with st.spinner("Generating recommendations..."):
+            if rec_method == "Hybrid":
+                hybrid_engine = build_hybrid_engine(
+                    ratings, movies, tags, algo_choice
+                )
+                recs = hybrid_engine.recommend(
+                    selected_user, n=n_recs, alpha=alpha
+                )
+                score_col = "hybrid_score"
+
+            elif rec_method == "Content-Based Only":
+                content_engine = build_content_engine(movies, tags)
+                recs = content_engine.recommend_for_user(
+                    selected_user, ratings, n=n_recs
+                )
+                score_col = "content_score"
+
+            else:
+                collab_engine = build_collab_engine(ratings, algo_choice)
+                recs = collab_engine.recommend_for_user(
+                    selected_user, ratings, movies, n=n_recs
+                )
+                score_col = "predicted_rating"
 
             if len(recs) > 0:
                 st.markdown(
@@ -400,32 +423,34 @@ if page == "🎬 Movie Recommendations":
                         "predicted_rating": "Predicted Rating",
                     }.get(score_col, "Score")
 
+                    # Generate a brief explanation for each movie
+                    reason = ""
+                    if rec_method == "Hybrid":
+                        hybrid_engine = build_hybrid_engine(ratings, movies, tags, algo_choice)
+                        exp = hybrid_engine.explain(selected_user, int(row['movieId']))
+                        reason = exp.get("explanation", "Recommended based on a mix of content similarity and collaborative filtering.")
+                    elif rec_method == "Content-Based Only":
+                        reason = f"Recommended because its genres ({row['genres']}) and tags are similar to movies you've rated highly."
+                    else:
+                        reason = f"Recommended because users with similar rating patterns enjoyed this movie (Predicted Rating: {score:.2f}/5)."
+
                     st.markdown(
                         f"""
                         <div class="movie-card">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <div>
                                     <div class="movie-title">#{rank} {row['title']}</div>
                                     <div class="movie-genres">{row['genres']}</div>
                                 </div>
                                 <span class="score-badge">{score_label}: {score:.3f}</span>
                             </div>
+                            <div style="font-size: 0.85rem; color: #a1a1aa; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                💡 <i>{reason}</i>
+                            </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-
-                # Show explanation for hybrid
-                if rec_method == "Hybrid" and len(recs) > 0:
-                    with st.expander("🔍 Why these recommendations?"):
-                        hybrid_engine = build_hybrid_engine(
-                            ratings, movies, tags, algo_choice
-                        )
-                        top_movie_id = recs.iloc[0]["movieId"]
-                        explanation = hybrid_engine.explain(
-                            selected_user, int(top_movie_id)
-                        )
-                        st.json(explanation)
             else:
                 st.info("No recommendations found for this user.")
 
