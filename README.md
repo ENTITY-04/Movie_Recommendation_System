@@ -9,6 +9,12 @@ A portfolio-grade recommendation system that combines **Content-Based Filtering*
 
 ---
 
+## 🌟 Live Demo
+
+View the live project on Streamlit: [**Movie Recommendation System**](https://entity-movie-recommendation-system.streamlit.app/)
+
+---
+
 ## 🏗️ Architecture
 
 ```
