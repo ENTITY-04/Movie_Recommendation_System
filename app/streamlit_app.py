@@ -154,10 +154,10 @@ def load_data():
     """Load all datasets."""
     data_dir = os.path.join(PROJECT_ROOT, "data", "ml-latest-small")
     if not os.path.exists(data_dir):
-        st.error(
-            "⚠️ Dataset not found! Run `python data/download_data.py` first."
-        )
-        st.stop()
+        st.info("⚠️ Dataset not found! Downloading automatically...")
+        from data.download_data import download_dataset
+        with st.spinner("Downloading dataset... (This only happens once)"):
+            download_dataset()
     movies = load_movies(data_dir)
     ratings = load_ratings(data_dir)
     tags = load_tags(data_dir)
