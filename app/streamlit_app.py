@@ -16,6 +16,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
+import altair as alt
 
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -531,12 +532,19 @@ elif page == "📊 Model Comparison":
         plt.tight_layout()
         st.pyplot(fig)
 
+        st.info(
+            "**What do these numbers mean?**\n\n"
+            "**RMSE (Root Mean Square Error)**: This tells us how far off our guesses are on average, but it penalizes really big mistakes heavily. So if an algorithm is usually right but occasionally completely wrong, its RMSE will be higher (worse).\n\n"
+            "**MAE (Mean Absolute Error)**: This is just a simple average of all the mistakes. If the algorithm guesses a 4-star rating but you actually gave a 3, the mistake is 1 star. It adds all those mistakes up and averages them.\n\n"
+            "**The Bottom Line**: Both numbers measure the size of the mistakes the algorithm makes. Because we want our guesses to be as close to reality as possible, **a lower number is always better!**"
+        )
+
         st.markdown(
             """
             > **Key Insights:**
-            > - **SVD** typically achieves the lowest RMSE/MAE due to effective latent factor modeling
-            > - **KNN** is interpretable but can be slower on large datasets
-            > - **NMF** enforces non-negativity which can improve interpretability
+            > - **SVD** (The AI Matchmaker) usually gets the lowest error scores because it's excellent at finding deep, hidden patterns.
+            > - **KNN** (The Neighbor Finder) makes it very easy to trace exactly why a movie was recommended, but it can be slow when there are lots of users.
+            > - **NMF** (The Recipe Builder) is slightly less accurate than SVD, but its ingredient-mixing approach makes the results very intuitive to understand.
             """
         )
     else:
@@ -609,6 +617,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
+        st.info("💡 **What this shows:** Most people tend to give movies a 4-star rating. Very few people give half-star or 1-star ratings, which means people generally only bother rating movies they actually liked!")
 
     # Genre distribution
     with col2:
@@ -637,31 +646,54 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
+        st.info("💡 **What this shows:** Drama and Comedy are by far the most common types of movies in this dataset. If you feel like there are too many Action or Sci-Fi movies in the world, this graph proves that Dramas actually rule!")
 
-    # Ratings over time
-    st.markdown('<div class="section-header">Rating Activity Over Time</div>', unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(14, 4))
-    fig.patch.set_facecolor("#0e1117")
-    ax.set_facecolor("#0e1117")
+    # Ratings over time (All Data)
+    st.markdown('<div class="section-header">Rating Activity (All Time)</div>', unsafe_allow_html=True)
 
-    ratings_monthly = ratings.set_index("datetime").resample("M").size()
-    ax.fill_between(
-        ratings_monthly.index,
-        ratings_monthly.values,
-        alpha=0.4,
-        color="#667eea",
+    # Use Month Start ('MS') so the data aligns perfectly with the start of the year for the x-axis ticks
+    ratings_monthly = ratings.set_index("datetime").resample("MS").size()
+
+    # Extract min and max years for the slider
+    min_year = int(ratings_monthly.index.min().year)
+    max_year = int(ratings_monthly.index.max().year)
+
+    # Use a Streamlit range slider to act as a horizontal scrollbar
+    selected_years = st.slider(
+        "Explore Timeline (Years)",
+        min_value=min_year,
+        max_value=max_year,
+        value=(max(min_year, max_year - 3), max_year), # Default to last 3 years
+        step=1
     )
-    ax.plot(ratings_monthly.index, ratings_monthly.values, color="#764ba2", linewidth=1.5)
-    ax.set_xlabel("Date", color="white")
-    ax.set_ylabel("Number of Ratings", color="white")
-    ax.set_title("Monthly Rating Activity", color="white", fontweight="bold")
-    ax.tick_params(colors="white")
-    ax.spines["bottom"].set_color("white")
-    ax.spines["left"].set_color("white")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    plt.tight_layout()
-    st.pyplot(fig)
+
+    # Filter data based on slider
+    mask = (ratings_monthly.index.year >= selected_years[0]) & (ratings_monthly.index.year <= selected_years[1])
+    filtered_ratings = ratings_monthly[mask]
+
+    recent_ratings_df = filtered_ratings.reset_index()
+    recent_ratings_df.columns = ["Date", "Number of Ratings"]
+
+    # Create the Altair chart
+    chart = alt.Chart(recent_ratings_df).mark_area(
+        color="#764ba2",
+        opacity=0.6,
+        line=True
+    ).encode(
+        x=alt.X("Date:T",
+                title="Year",
+                axis=alt.Axis(format="%Y", tickCount="year")),
+        y=alt.Y("Number of Ratings:Q", title="Number of Ratings"),
+        tooltip=[
+            alt.Tooltip("Date:T", format="%B", title="Month"),
+            alt.Tooltip("Date:T", format="%Y", title="Year"),
+            alt.Tooltip("Number of Ratings:Q", title="Ratings")
+        ]
+    )
+
+    st.altair_chart(chart, use_container_width=True)
+
+    st.info("💡 **What this shows:** This timeline shows when people were most active in rating movies. You can use the slider above the chart to 'scroll' through different years.")
 
     # User activity distribution
     st.markdown('<div class="section-header">User Activity</div>', unsafe_allow_html=True)
@@ -687,6 +719,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
+        st.info("💡 **What this shows:** Most users only rate a handful of movies, creating a huge spike on the left side of the graph. However, there are a few 'super users' who have rated hundreds or even thousands of movies!")
 
     with col2:
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -708,6 +741,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
+        st.info("💡 **What this shows:** Just like users, most movies only get a few ratings (the big spike on the left). But famous blockbuster movies get tons of ratings, stretching the graph far to the right.")
 
 
 # ─────────────────────────────────────────────
@@ -744,33 +778,33 @@ elif page == "📖 Algorithm Guide":
         },
         {
             "name": "KNN Basic (K-Nearest Neighbors)",
-            "badge": "Memory-Based Collaborative",
+            "badge": "The Neighbor Finder",
             "color": "#f093fb",
             "icon": "👥",
-            "what": "Finds the <b>K most similar users</b> to you based on shared ratings, then recommends movies those users loved that you have not seen yet.",
-            "how": "Similarity between users is computed using <b>cosine similarity</b> on their rating vectors. The predicted rating for a movie is a weighted average of the K neighbours' ratings for that movie.",
-            "strength": "Simple, transparent, and highly interpretable — you can see exactly which similar users drove the recommendation.",
-            "weakness": "Slow on large datasets (must compare against all users). Struggles when the rating matrix is very sparse.",
+            "what": "Acts like <b>The Neighbor Finder</b>. It finds other people whose tastes perfectly match yours (your 'neighbors') and recommends what they liked.",
+            "how": "It calculates how similar your rating history is to everyone else's. Then, it takes the ratings from the users most similar to you and averages them out to guess how much you'd like an unseen movie.",
+            "strength": "Simple, transparent, and highly interpretable — it's very easy to trace exactly why a movie was recommended.",
+            "weakness": "Can be slow when there are lots of users, and struggles if you haven't rated enough movies to find 'neighbors'.",
         },
         {
             "name": "SVD (Singular Value Decomposition)",
-            "badge": "Model-Based Collaborative — Best Accuracy",
+            "badge": "The AI Matchmaker",
             "color": "#43e97b",
             "icon": "🧮",
-            "what": "Learns <b>hidden taste profiles</b> for every user and hidden <b>feature profiles</b> for every movie, then predicts ratings by matching them.",
-            "how": "The user-movie rating matrix is factorised into latent factors — abstract concepts like 'prefers slow-burn dramas' or 'loves 80s comedies' — without being explicitly defined. Predicted rating = user-factor vector · movie-factor vector.",
-            "strength": "Best rating-prediction accuracy. Fast at inference time. Handles sparsity well through dimensionality reduction.",
-            "weakness": "Less interpretable — the latent factors have no human-readable label.",
+            "what": "Acts like an <b>advanced AI Matchmaker</b>. It uncovers deep, abstract connections between movies—like 'slow-paced films with dark atmospheres'—to figure out exactly what you like and dislike.",
+            "how": "It uses advanced math to break down the entire history of everyone's ratings into hidden 'factors' that even humans might not immediately recognise, predicting ratings with high accuracy.",
+            "strength": "Usually gets the lowest error scores because it's excellent at finding deep, hidden patterns.",
+            "weakness": "It can be hard to explain exactly *why* it recommended something, because the hidden patterns don't have human-readable names like 'Action' or 'Comedy'.",
         },
         {
             "name": "NMF (Non-Negative Matrix Factorization)",
-            "badge": "Model-Based Collaborative",
+            "badge": "The Recipe Builder",
             "color": "#f9844a",
             "icon": "📐",
-            "what": "Like SVD, but with one key constraint: <b>all learned values must be >= 0</b>. This forces additive, part-based representations.",
-            "how": "Because factors can only add (never cancel each other), they tend to align with interpretable concepts such as genre clusters. A user profile might look like '40% Action, 35% Sci-Fi, 25% Thriller'.",
-            "strength": "More interpretable than SVD — factors often correspond to recognisable genres or themes.",
-            "weakness": "Slightly lower accuracy than SVD due to the non-negativity constraint.",
+            "what": "Acts like a <b>Recipe Builder</b>. It figures out your movie taste by combining basic ingredients—like '3 parts Action, 2 parts Comedy'—to find the perfect movie.",
+            "how": "Unlike SVD, this method isn't allowed to use negative numbers. Because it can only *add* things together, it tends to group movies into very clear, distinct 'ingredients' (often matching genres) to build your profile.",
+            "strength": "Its ingredient-mixing approach makes the results very intuitive to understand.",
+            "weakness": "Slightly less accurate than SVD because not being allowed to use negative numbers (dislikes) limits its predictive power.",
         },
         {
             "name": "Hybrid Recommender",

@@ -31,7 +31,7 @@ Collaborative (KNN / SVD / NMF)
 **MovieLens Latest Small** — 100,836 ratings from 610 users on 9,742 movies.
 
 - Free for research & education ([GroupLens](https://grouplens.org/datasets/movielens/))
-- Downloaded automatically via `data/download_data.py`
+- Downloaded automatically when launching the Streamlit app, or via `data/download_data.py`
 
 ## 🚀 Quick Start
 
@@ -98,9 +98,9 @@ streamlit run app/streamlit_app.py
 
 | Algorithm | Full Name | How It Works |
 |-----------|-----------|-------------|
-| **KNN Basic** | K-Nearest Neighbors | Finds the *K* most similar users (or movies) based on past ratings, then predicts your rating by averaging theirs. Simple and interpretable, but slow on large datasets. |
-| **SVD** | Singular Value Decomposition | Decomposes the user-movie rating matrix into hidden (latent) factors — e.g., "how much does this user like action?" and "how action-packed is this movie?" — then predicts ratings from these factors. Best accuracy overall. |
-| **NMF** | Non-negative Matrix Factorization | Similar to SVD but forces all factors to be positive, which makes them more interpretable (factors map to additive topics like genres). Slightly less accurate but more explainable. |
+| **KNN Basic** | The Neighbor Finder | Finds other people whose tastes perfectly match yours (your "neighbors") and recommends what they liked. Very transparent, but slow on large datasets. |
+| **SVD** | The AI Matchmaker | Uncovers deep, abstract connections between movies—like "slow-paced films with dark atmospheres"—to figure out exactly what you like and dislike. Highest accuracy, but works like a black box. |
+| **NMF** | The Recipe Builder | Figures out your movie taste by combining basic ingredients—like "3 parts Action, 2 parts Comedy"—to find the perfect movie for you. Highly intuitive, slightly less accurate than SVD. |
 | **Content-Based** | TF-IDF + Cosine Similarity | Recommends movies similar in *content* (genres, tags) to what you've liked. Works even without other users' data. |
 | **Hybrid** | Weighted Combination | Blends Content-Based and Collaborative scores: `score = α × content + (1−α) × collaborative`. Balances the strengths of both. |
 
