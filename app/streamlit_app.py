@@ -152,7 +152,11 @@ st.markdown("""
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    """Load all datasets."""
+    """
+    Load all required datasets (movies, ratings, and tags) from the local directory.
+    If the dataset is not found locally, it will automatically download it.
+    This function is cached by Streamlit to avoid reloading data on every user interaction.
+    """
     data_dir = os.path.join(PROJECT_ROOT, "data", "ml-latest-small")
     if not os.path.exists(data_dir):
         msg_placeholder = st.empty()
@@ -170,7 +174,12 @@ def load_data():
 
 @st.cache_resource
 def build_content_engine(movies_df, tags_df):
-    """Build and cache the content-based recommender."""
+    """
+    Build and cache the content-based recommender system.
+    This engine uses movie metadata (genres and user tags) to find similar movies
+    using techniques like TF-IDF and cosine similarity. The built engine is cached
+    so it doesn't need to be refit every time the app re-renders.
+    """
     engine = ContentBasedRecommender()
     engine.fit(movies_df, tags_df)
     return engine
@@ -178,7 +187,12 @@ def build_content_engine(movies_df, tags_df):
 
 @st.cache_resource
 def build_collab_engine(ratings_df, algo_name):
-    """Build and cache a collaborative filtering recommender."""
+    """
+    Build and cache a collaborative filtering recommender system.
+    This engine uses the selected algorithm (e.g., SVD, KNN, or NMF) to learn
+    user preferences based on past ratings. It is trained on the full ratings dataset
+    and cached for faster predictions.
+    """
     engine = CollaborativeRecommender(algo_name)
     engine.fit(ratings_df)
     return engine
@@ -186,7 +200,12 @@ def build_collab_engine(ratings_df, algo_name):
 
 @st.cache_resource
 def build_hybrid_engine(ratings_df, movies_df, tags_df, algo_name):
-    """Build and cache the hybrid recommender."""
+    """
+    Build and cache the hybrid recommender system.
+    The hybrid engine combines predictions from both the collaborative model (based on the chosen algorithm)
+    and the content-based model. It calculates a weighted average of scores (controlled by alpha)
+    to provide more robust and personalized recommendations.
+    """
     engine = HybridRecommender(alpha=0.3, collab_algo=algo_name)
     engine.fit(ratings_df, movies_df, tags_df)
     return engine
@@ -533,6 +552,8 @@ elif page == "📊 Model Comparison":
         st.pyplot(fig)
 
         st.info(
+            "💡 **Graph Interpretation:** The bar charts above compare the error rates of the three models (SVD, KNN, NMF). "
+            "Shorter bars indicate lower errors, meaning more accurate predictions. As seen here, SVD typically has the shortest bars, meaning it makes the best predictions.\n\n"
             "**What do these numbers mean?**\n\n"
             "**RMSE (Root Mean Square Error)**: This tells us how far off our guesses are on average, but it penalizes really big mistakes heavily. So if an algorithm is usually right but occasionally completely wrong, its RMSE will be higher (worse).\n\n"
             "**MAE (Mean Absolute Error)**: This is just a simple average of all the mistakes. If the algorithm guesses a 4-star rating but you actually gave a 3, the mistake is 1 star. It adds all those mistakes up and averages them.\n\n"
@@ -617,7 +638,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
-        st.info("💡 **What this shows:** Most people tend to give movies a 4-star rating. Very few people give half-star or 1-star ratings, which means people generally only bother rating movies they actually liked!")
+        st.info("💡 **Graph Interpretation:** This bar chart shows the frequency of each rating value given by users. We can observe a left-skewed distribution, meaning users generally rate movies they enjoyed (3-5 stars) rather than leaving bad reviews (0.5-2 stars). The most common rating is 4.0 stars.")
 
     # Genre distribution
     with col2:
@@ -646,7 +667,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
-        st.info("💡 **What this shows:** Drama and Comedy are by far the most common types of movies in this dataset. If you feel like there are too many Action or Sci-Fi movies in the world, this graph proves that Dramas actually rule!")
+        st.info("💡 **Graph Interpretation:** This horizontal bar chart ranks the top 15 most frequent genres in the dataset. Drama and Comedy are the dominant genres, appearing significantly more often than Action, Thriller, or Sci-Fi.")
 
     # Ratings over time (All Data)
     st.markdown('<div class="section-header">Rating Activity (All Time)</div>', unsafe_allow_html=True)
@@ -693,7 +714,7 @@ elif page == "📈 Dataset Explorer":
 
     st.altair_chart(chart, use_container_width=True)
 
-    st.info("💡 **What this shows:** This timeline shows when people were most active in rating movies. You can use the slider above the chart to 'scroll' through different years.")
+    st.info("💡 **Graph Interpretation:** This area chart visualizes user rating activity over time. Peaks in the graph indicate periods when users were highly engaged and rated many movies. You can adjust the year slider above to zoom into specific time periods.")
 
     # User activity distribution
     st.markdown('<div class="section-header">User Activity</div>', unsafe_allow_html=True)
@@ -719,7 +740,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
-        st.info("💡 **What this shows:** Most users only rate a handful of movies, creating a huge spike on the left side of the graph. However, there are a few 'super users' who have rated hundreds or even thousands of movies!")
+        st.info("💡 **Graph Interpretation:** This histogram displays how many movies each user has rated. It exhibits a 'long tail' distribution: the vast majority of users rate only a few movies (the large peak on the left), while a very small number of highly active 'power users' rate hundreds or thousands of movies.")
 
     with col2:
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -741,7 +762,7 @@ elif page == "📈 Dataset Explorer":
         ax.spines["right"].set_visible(False)
         plt.tight_layout()
         st.pyplot(fig)
-        st.info("💡 **What this shows:** Just like users, most movies only get a few ratings (the big spike on the left). But famous blockbuster movies get tons of ratings, stretching the graph far to the right.")
+        st.info("💡 **Graph Interpretation:** Similar to user activity, this histogram shows how many ratings each movie receives. Most movies receive very few ratings, whereas a small number of blockbuster or cult classic movies receive the vast majority of user engagement.")
 
 
 # ─────────────────────────────────────────────
